@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Login } from './components/Login';
 import { useStorage } from './hooks/useStorage';
@@ -9,6 +9,17 @@ import { FormularioDespesa } from './components/FormularioDespesa';
 import { Historico } from './components/Historico';
 import { Configuracoes } from './components/Configuracoes';
 import { Settings, LogOut, Loader2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "./components/ui/alert-dialog";
 
 type TabType = 'dashboard' | 'venda' | 'despesa' | 'historico' | 'configuracoes';
 
@@ -17,6 +28,32 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const { saldos, transacoes, adicionarTransacao, removerTransacao, limparDados } = useStorage();
   const { configuracoes, atualizarMaterial, atualizarModelo, adicionarCustoFixo, editarCustoFixo, removerCustoFixo, adicionarModelo, adicionarMaterial, removerMaterial } = useConfiguracoes();
+
+  // Handle browser back button for settings tab
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      // If we are in settings and user goes back, switch to dashboard
+      if (activeTab === 'configuracoes') {
+        setActiveTab('dashboard');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [activeTab]);
+
+  const toggleSettings = () => {
+    if (activeTab === 'configuracoes') {
+      if (window.location.hash === '#configuracoes') {
+        window.history.back();
+      } else {
+        setActiveTab('dashboard');
+      }
+    } else {
+      window.history.pushState({ tab: 'configuracoes' }, '', '#configuracoes');
+      setActiveTab('configuracoes');
+    }
+  };
 
   if (loading) {
     return (
@@ -46,19 +83,37 @@ function AppContent() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setActiveTab(activeTab === 'configuracoes' ? 'dashboard' : 'configuracoes')}
+            onClick={toggleSettings}
             className="bg-[#294c65] rounded-[15px] size-[51px] flex items-center justify-center hover:opacity-90 transition-opacity"
             title="Configurações"
           >
             <Settings className="w-6 h-6 text-white" strokeWidth={1.5} />
           </button>
-          <button
-            onClick={signOut}
-            className="bg-red-500/10 hover:bg-red-500/20 rounded-[15px] size-[51px] flex items-center justify-center transition-colors"
-            title="Sair"
-          >
-            <LogOut className="w-5 h-5 text-red-400" strokeWidth={1.5} />
-          </button>
+          
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <button
+                className="bg-red-500/10 hover:bg-red-500/20 rounded-[15px] size-[51px] flex items-center justify-center transition-colors"
+                title="Sair"
+              >
+                <LogOut className="w-5 h-5 text-red-400" strokeWidth={1.5} />
+              </button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Sair do Sistema</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tem certeza que deseja sair? Você precisará fazer login novamente para acessar seus dados.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={signOut} className="bg-red-500 hover:bg-red-600 text-white">
+                  Sair
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
 
